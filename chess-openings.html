@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>ChessOpener — Master Your Openings</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/sql-wasm.js"></script>
+<style>
+:root{
+  /* GREEN THEME */
+  --bg:#0a0f0a; --s1:#0f1a0f; --s2:#162416; --s3:#1c2e1c;
+  --bd:#1e3a1e; --bd2:#2a4a2a;
+  --g1:#22c55e; --g2:#4ade80; --g3:#86efac; --g4:#dcfce7;
+  --accent:#f0a030; --accent2:#fbbf24;
+  --txt:#e8f5e8; --dim:#6b8f6b; --dim2:#4a6a4a;
+  --sq-l:#f0e6c8; --sq-d:#7a9e5a;
+  --hl-l:#d4f7a0; --hl-d:#8bc34a;
+  --ok:#22c55e; --er:#f43f5e; --warn:#f59e0b;
+  --fd:'Cinzel',Georgia,serif;
+  --fb:'Inter',system-ui,sans-serif;
+  --nav:215px; --rad:10px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{height:100%}
+body{height:100%;display:flex;overflow:hidden;background:var(--bg);color:var(--txt);font-family:var(--fb);font-size:14px;line-height:1.6}
+
+/* ── SIDEBAR ── */
+.nav{width:var(--nav);flex-shrink:0;height:100vh;background:var(--s1);border-right:1px solid var(--bd);display:flex;flex-direction:column;padding:20px 12px;overflow-y:auto}
+.logo{display:flex;align-items:center;gap:10px;margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--bd)}
+.logo-i{font-size:28px;filter:drop-shadow(0 0 8px var(--g1))}
+.logo-t{font-family:var(--fd);line-height:1.2}
+.logo-t .l1{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.1em}
+.logo-t .l2{font-size:18px;font-weight:700;color:var(--g2);text-shadow:0 0 12px rgba(74,222,128,.4)}
+nav ul{list-style:none;flex:1;display:flex;flex-direction:column;gap:3px}
+.nb{width:100%;background:0;border:none;color:var(--dim);font:500 13px/1 var(--fb);text-align:left;padding:10px 13px;border-radius:var(--rad);cursor:pointer;display:flex;align-items:center;gap:9px;transition:.15s;letter-spacing:.01em}
+.nb:hover{background:var(--s2);color:var(--txt)}
+.nb.on{background:linear-gradient(135deg,var(--g1),var(--g2));color:#0a0f0a;font-weight:600;box-shadow:0 4px 14px rgba(34,197,94,.35)}
+.nav-foot{font-size:11px;color:var(--dim2);text-align:center;padding-top:12px;border-top:1px solid var(--bd);margin-top:8px}
+
+/* ── SHELL ── */
+.shell{flex:1;position:relative;overflow:hidden}
+.view{display:none;position:absolute;inset:0}
+.view.on{display:block;overflow-y:auto;overflow-x:hidden;padding:28px 36px;animation:fi .2s ease}
+.view.sql-view,.view.mon-view{padding:0!important}
+.view.sql-view.on,.view.mon-view.on{display:flex;flex-direction:column;overflow:hidden}
+.sql-inner,.mon-inner{display:flex;flex-direction:column;flex:1;min-height:0;padding:28px 36px 16px;overflow:hidden}
+@keyframes fi{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+
+.vh{margin-bottom:22px;border-bottom:1px solid var(--bd);padding-bottom:14px;flex-shrink:0}
+.vh h1{font-family:var(--fd);font-size:30px;font-weight:700;line-height:1.1;color:var(--txt)}
+.vh h1 em{font-style:italic;color:var(--g2)}
+.vh p{color:var(--dim);margin-top:4px;font-size:13px}
+
+/* ── CHESS BOARD ── */
+/* Board wrapper includes coordinate labels */
+.board-wrap{display:inline-flex;flex-direction:column;gap:0;flex-shrink:0}
+.board-wrap.sm{transform:scale(.72);transform-origin:top left}
+.files-row{display:flex;padding-left:22px}
+.files-row span{width:56px;text-align:center;font-size:11px;font-weight:600;color:var(--g3);font-family:var(--fd);text-transform:uppercase;letter-spacing:.05em}
+.ranks-col{display:flex;flex-direction:column;width:22px;justify-content:space-around}
+.ranks-col span{height:56px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--g3);font-family:var(--fd)}
+.board-row{display:flex;gap:0}
+.board{display:grid;grid-template-columns:repeat(8,56px);grid-template-rows:repeat(8,56px);border:2px solid var(--g1);border-radius:4px;overflow:hidden;box-shadow:0 0 0 1px var(--bd2),0 16px 48px rgba(0,0,0,.7),0 0 40px rgba(34,197,94,.08);flex-shrink:0}
+.board.sm-board{grid-template-columns:repeat(8,36px);grid-template-rows:repeat(8,36px)}
+.sq{display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;user-select:none;transition:filter .1s}
+.sq:hover{filter:brightness(1.12)}
+.sq.l{background:var(--sq-l)}.sq.d{background:var(--sq-d)}
+.sq.hl{background:var(--hl-l)!important}.sq.hl.d{background:var(--hl-d)!important}
+.sq.sel{box-shadow:inset 0 0 0 3px var(--accent)}
+.sq.lm{background:rgba(34,197,94,.22)!important}
+/* Aesthetic pieces using Unicode with size/shadow */
+.pc{
+  font-size:36px;line-height:1;pointer-events:none;
+  filter:drop-shadow(0 2px 2px rgba(0,0,0,.6));
+  transition:transform .1s;
+}
+.board.sm-board .pc{font-size:22px}
+.sq:hover .pc{transform:scale(1.08)}
+/* White pieces brighter, black pieces darker */
+.pc.white{filter:drop-shadow(0 2px 3px rgba(0,0,0,.8)) drop-shadow(0 0 2px rgba(255,255,255,.6))}
+.pc.black{filter:drop-shadow(0 2px 3px rgba(0,0,0,.9))}
+
+/* ── BUTTONS ── */
+.btn{border:none;border-radius:var(--rad);font:600 13px/1 var(--fb);cursor:pointer;padding:9px 18px;transition:.15s;display:inline-flex;align-items:center;gap:6px}
+.btn-g{background:linear-gradient(135deg,var(--g1),var(--g2));color:#0a0f0a;box-shadow:0 4px 12px rgba(34,197,94,.3)}
+.btn-g:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(34,197,94,.4)}
+.btn-o{background:var(--s2);border:1px solid var(--bd);color:var(--txt)}.btn-o:hover{border-color:var(--g1);color:var(--g2)}
+.btn-r{background:0;border:1px solid var(--er);color:var(--er)}.btn-r:hover{background:rgba(244,63,94,.08)}
+.btn-s{padding:5px 11px;font-size:12px}
+.hid{display:none!important}
+
+/* ── EXPLORER ── */
+.exp-wrap{display:grid;grid-template-columns:240px 1fr;gap:16px;height:calc(100vh - 160px)}
+.op-list{background:var(--s1);border:1px solid var(--bd);border-radius:var(--rad);overflow-y:auto;padding:5px}
+.op-item{padding:10px 13px;border-radius:8px;cursor:pointer;border-left:3px solid transparent;transition:.15s;margin-bottom:2px}
+.op-item:hover{background:var(--s2)}
+.op-item.on{background:var(--s2);border-left-color:var(--g1);box-shadow:inset 0 0 0 1px var(--bd2)}
+.op-item h3{font-family:var(--fd);font-size:13px;font-weight:600;color:var(--txt)}
+.op-item p{font-size:11px;color:var(--dim);margin-top:2px}
+.op-detail{background:var(--s1);border:1px solid var(--bd);border-radius:var(--rad);padding:22px;overflow-y:auto}
+.op-ph{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--dim);gap:10px}
+.op-ph span{font-size:48px;filter:drop-shadow(0 0 12px var(--g1))}
+.d-eco{font-size:10px;color:var(--g1);letter-spacing:.12em;text-transform:uppercase;margin-bottom:4px;font-weight:600}
+.d-name{font-family:var(--fd);font-size:22px;color:var(--txt);margin-bottom:4px}
+/* Video section */
+.d-video{background:var(--s2);border:1px solid var(--bd);border-radius:var(--rad);margin:14px 0;overflow:hidden}
+.d-video-hdr{padding:8px 12px;font-size:11px;color:var(--g2);font-weight:600;text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:6px}
+.d-video-thumb{position:relative;cursor:pointer;overflow:hidden;background:#000;display:block;text-decoration:none}
+.d-video-thumb img{width:100%;height:195px;object-fit:cover;display:block;opacity:.8;transition:opacity .2s}
+.d-video-thumb:hover img{opacity:1}
+.d-video-play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;pointer-events:none}
+.d-video-play-btn{width:58px;height:58px;background:rgba(220,0,0,.9);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 4px 20px rgba(0,0,0,.6);transition:transform .15s}
+.d-video-thumb:hover .d-video-play-btn{transform:scale(1.12)}
+.d-video-label{font-size:12px;color:#fff;font-weight:600;text-shadow:0 1px 4px rgba(0,0,0,.9);background:rgba(0,0,0,.45);padding:3px 10px;border-radius:12px}
+.d-moves{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:14px}
+.mv-badge{background:var(--s2);border:1px solid var(--bd);padding:4px 10px;border-radius:16px;font-size:12px;color:var(--g3);font-weight:500}
+.mv-badge .mn{color:var(--dim);margin-right:2px;font-size:10px}
+.d-desc{color:#b0c8b0;font-size:13px;line-height:1.8;margin-bottom:14px}
+.d-section{margin-top:14px}
+.d-section h4{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--g2);margin-bottom:7px;font-weight:600}
+.d-section ul{list-style:none;display:flex;flex-direction:column;gap:4px;margin-bottom:14px}
+.d-section li{padding-left:14px;position:relative;color:#9ab89a;font-size:13px}
+.d-section li::before{content:'▸';position:absolute;left:0;color:var(--g1)}
+/* Fetch from Lichess */
+.fetch-bar{display:flex;gap:8px;margin-bottom:14px;align-items:center}
+.fetch-status{font-size:11px;color:var(--dim);flex:1}
+.fetch-status.ok{color:var(--ok)}.fetch-status.bad{color:var(--er)}
+
+/* ── PRACTICE ── */
+.prac-wrap{display:flex;gap:24px;align-items:flex-start}
+.prac-side{width:230px;flex-shrink:0;display:flex;flex-direction:column;gap:10px}
+.lbl{font-size:10px;color:var(--g2);text-transform:uppercase;letter-spacing:.1em;font-weight:600;margin-bottom:2px}
+.sel{width:100%;background:var(--s2);border:1px solid var(--bd);color:var(--txt);padding:8px 10px;border-radius:var(--rad);font:13px var(--fb);cursor:pointer;outline:none}
+.sel:focus{border-color:var(--g1)}
+.mv-box{background:var(--s1);border:1px solid var(--bd);border-radius:var(--rad);padding:11px;min-height:90px}
+.mv-box-t{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--g2);margin-bottom:7px;font-weight:600}
+.mv-list{list-style:none;display:flex;flex-direction:column;gap:2px}
+.mv-list li{font-size:13px;color:var(--g3);display:flex;gap:5px}
+.mv-list li .mn{color:var(--dim);min-width:18px}
+.hint-b{background:var(--s2);border:1px solid var(--accent);border-radius:var(--rad);padding:10px;font-size:12px;color:var(--accent2)}
+.board-col{display:flex;flex-direction:column;align-items:flex-start;gap:10px}
+.stat-bar{background:var(--s1);border:1px solid var(--bd);border-radius:var(--rad);padding:8px 16px;font-size:13px;color:var(--dim);text-align:center;width:472px}
+.stat-bar.ok{border-color:var(--ok);color:var(--ok);background:rgba(34,197,94,.06)}
+.stat-bar.bad{border-color:var(--er);color:var(--er);background:rgba(244,63,94,.06)}
+
+/* ── QUIZ ── */
+.quiz-wrap{display:flex;flex-direction:column;align-items:center;gap:20px}
+.quiz-meta{display:flex;gap:20px}
+.sc-box{text-align:center;background:var(--s1);border:1px solid var(--bd);border-radius:var(--rad);padding:12px 22px}
+.sc-box span{display:block;font-family:var(--fd);font-size:30px;font-weight:700;color:var(--g2)}
+.sc-box small{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em}
+.quiz-card{display:flex;gap:28px;align-items:flex-start;background:var(--s1);border:1px solid var(--bd);border-radius:12px;padding:24px}
+.q-prompt{display:flex;flex-direction:column;gap:12px;max-width:270px}
+#q-q{font-family:var(--fd);font-size:16px;line-height:1.5;color:var(--txt)}
+.q-opts{display:flex;flex-direction:column;gap:6px}
+.q-opt{background:var(--s2);border:1px solid var(--bd);color:var(--txt);padding:9px 13px;border-radius:var(--rad);font:500 13px var(--fb);text-align:left;cursor:pointer;transition:.15s;width:100%}
+.q-opt:hover{border-color:var(--g1);color:var(--g2);background:rgba(34,197,94,.06)}
+.q-opt.ok{border-color:var(--ok);background:rgba(34,197,94,.1);color:var(--ok)}
+.q-opt.bad{border-color:var(--er);background:rgba(244,63,94,.08);color:var(--er)}
+.q-fb{padding:10px 12px;border-radius:var(--rad);font-size:13px;line-height:1.5;font-weight:500}
+.q-fb.ok{background:rgba(34,197,94,.08);border:1px solid var(--ok);color:var(--ok)}
+.q-fb.bad{background:rgba(244,63,94,.06);border:1px solid var(--er);color:var(--er)}
+.quiz-ctrl{display:flex;gap:9px}
+
+/* ── PROGRESS ── */
+.prog-wrap{display:flex;flex-direction:column;gap:20px}
+.stats-row{display:flex;gap:12px;flex-wrap:wrap}
+.st-card{background:var(--s1);border:1px solid var(--bd);border-radius:var(--rad);padding:14px 20px;min-width:120px}
+.st-v{font-family:var(--fd);font-size:26px;font-weight:700;color:var(--g2)}
+.st-l{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-top:2px}
+.prog-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:11px}
+.prog-card{background:var(--s1);border:1px solid var(--bd);border-radius:var(--rad);padding:13px;transition:.15s}
+.prog-card:hover{border-color:var(--g1);box-shadow:0 0 0 1px var(--bd2)}
+.prog-card h3{font-family:var(--fd);font-size:13px;margin-bottom:9px;color:var(--txt)}
+.pb-bg{background:var(--s2);border-radius:20px;height:6px;overflow:hidden;margin-bottom:6px}
+.pb-f{height:100%;background:linear-gradient(90deg,var(--g1),var(--g2));border-radius:20px;transition:width .6s ease}
+.pb-pct{font-size:11px;color:var(--dim);display:flex;justify-content:space-between}
+.pb-pct strong{color:var(--g3);font-weight:600}
+
+/* ── NOTATION GUIDE ── */
+.guide-wrap{max-width:860px}
+.guide-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
+.g-card{background:var(--s1);border:1px solid var(--bd);border-radius:var(--rad);padding:18px 20px}
+.g-card h3{font-family:var(--fd);font-size:16px;color:var(--g2);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.g-card p{font-size:13px;color:#9ab89a;line-height:1.8;margin-bottom:8px}
+.g-card p:last-child{margin-bottom:0}
+.g-code{background:var(--s2);border:1px solid var(--bd2);border-radius:6px;padding:10px 14px;font:13px/1.8 'DM Mono','Courier New',monospace;color:var(--g3);margin:8px 0;white-space:pre}
+.g-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+.g-table th{background:var(--s2);color:var(--g2);padding:6px 12px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--bd)}
+.g-table td{padding:6px 12px;border-bottom:1px solid var(--bd);color:#b0c8b0}
+.g-table tr:last-child td{border-bottom:none}
+.g-table td:first-child{color:var(--g3);font-weight:600;font-family:'DM Mono',monospace}
+.notation-demo{background:var(--s1);border:1px solid var(--bd);border-radius:var(--rad);padding:18px 20px;margin-bottom:16px}
+.notation-demo h3{font-family:var(--fd);font-size:16px;color:var(--g2);margin-bottom:12px}
+.nd-board-wrap{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap}
+.nd-desc{flex:1;min-width:200px}
+.nd-step{display:flex;align-items:flex-start;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;transition:.15s;border:1px solid transparent;margin-bottom:4px}
+.nd-step:hover{background:var(--s2);border-color:var(--bd)}
+.nd-step.on{background:rgba(34,197,94,.08);border-color:var(--g1)}
+.nd-step .nd-mv{font-family:'DM Mono',monospace;font-size:15px;font-weight:600;color:var(--g2);min-width:56px}
+.nd-step .nd-txt{font-size:12px;color:#9ab89a;line-height:1.5}
+
+/* ── SQL LAB ── */
+.sql-body{flex:1;display:grid;grid-template-columns:240px 1fr;gap:14px;min-height:0;overflow:hidden}
+.sql-side{display:flex;flex-direction:column;gap:11px;overflow:hidden;min-height:0;height:100%}
+.sql-ch-box{flex:1;background:var(--s1);border:1px solid var(--bd);border-radius:var(--rad);overflow-y:auto;min-height:0}
+.ch-item{padding:11px 13px;border-left:3px solid transparent;cursor:pointer;transition:.15s;border-bottom:1px solid var(--bd)}
+.ch-item:last-child{border-bottom:none}
+.ch-item:hover{background:var(--s2)}
+.ch-item.on{background:var(--s2);border-left-color:var(--g1)}
+.ch-item h4{font-size:12px;font-weight:600;color:var(--txt);margin-bottom:2px}
+.ch-item p{font-size:11px;color:var(--dim)}
+.badge{display:inline-block;font-size:10px;padding:1px 6px;border-radius:8px;margin-left:4px;vertical-align:middle;font-weight:600}
+.be{background:rgba(34,197,94,.12);color:var(--ok);border:1px solid rgba(34,197,94,.25)}
+.bm{background:rgba(251,191,36,.1);color:var(--accent2);border:1px solid rgba(251,191,36,.25)}
+.bh{background:rgba(244,63,94,.1);color:var(--er);border:1px solid rgba(244,63,94,.25)}
+.schema-box{background:var(--s1);border:1px solid var(--bd);border-radius:var(--rad);padding:12px;flex-shrink:0;overflow-y:auto;max-height:210px}
+.schema-box h4{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--g2);margin-bottom:8px;font-weight:600}
+.tbl-s{margin-bottom:8px}
+.tbl-s h5{font-size:11px;color:var(--g3);margin-bottom:3px;font-weight:600}
+.tbl-s ul{list-style:none;font-size:10px;color:var(--dim);padding-left:7px}
+.tbl-s ul li::before{content:'· ';color:var(--g1)}
+.sql-main{display:flex;flex-direction:column;gap:9px;min-height:0;overflow:hidden;height:100%}
+.ch-header{background:var(--s1);border:1px solid var(--bd);border-radius:var(--rad);padding:12px 16px;flex-shrink:0}
+.ch-header h3{font-family:var(--fd);font-size:16px;margin-bottom:4px;color:var(--txt)}
+.ch-header p{font-size:12px;color:var(--dim);line-height:1.6}
+.ch-tip{margin-top:5px;font-size:11px;color:var(--g2);font-style:italic}
+.ed-wrap{border:1px solid var(--bd);border-radius:var(--rad);overflow:hidden;flex-shrink:0}
+.ed-top{background:var(--s2);padding:7px 13px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--bd)}
+.ed-top-l{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em}
+.ed-acts{display:flex;gap:7px}
+.sql-ed{width:100%;background:#050d05;color:#b8f0b8;caret-color:var(--g2);font:13px/1.8 'DM Mono','Courier New',monospace;border:none;outline:none;padding:12px 16px;resize:vertical;tab-size:2;height:120px;min-height:70px;max-height:240px}
+.sql-ed::placeholder{color:#2a4a2a}
+.sql-ed::selection{background:rgba(34,197,94,.2)}
+.hint-card{background:var(--s2);border:1px solid var(--bd2);border-radius:var(--rad);padding:11px;font-size:12px;color:var(--dim);line-height:1.7;flex-shrink:0}
+.hint-card h5{color:var(--g3);margin-bottom:5px;font-size:10px;text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.res-area{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;border-radius:var(--rad);border:1px solid var(--bd)}
+.res-top{background:var(--s2);padding:7px 13px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--bd);flex-shrink:0}
+.res-top span{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;font-weight:600}
+#res-st{font-size:11px;padding:2px 9px;border-radius:10px;font-weight:500}
+#res-st.ok{background:rgba(34,197,94,.12);color:var(--ok);border:1px solid rgba(34,197,94,.25)}
+#res-st.bad{background:rgba(244,63,94,.1);color:var(--er);border:1px solid rgba(244,63,94,.25)}
+#res-st.info{background:rgba(34,197,94,.06);color:var(--g2);border:1px solid rgba(34,197,94,.2)}
+.res-scroll{flex:1;overflow:auto;background:var(--s1)}
+.res-tbl{width:100%;border-collapse:collapse;font-size:12px}
+.res-tbl th{background:var(--s2);color:var(--g2);padding:7px 13px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--bd);position:sticky;top:0;z-index:1;font-weight:600}
+.res-tbl td{padding:6px 13px;border-bottom:1px solid var(--bd);color:var(--txt)}
+.res-tbl tr:hover td{background:var(--s2)}
+.res-tbl tr:last-child td{border-bottom:none}
+.res-msg{padding:18px;color:var(--dim);font-size:13px;text-align:center}
+.res-msg.ok{color:var(--ok)}.res-msg.bad{color:var(--er)}
+
+/* ── DB MONITOR ── */
+.mon-body{flex:1;display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:auto auto 1fr;gap:12px;min-height:0;overflow-y:auto;padding-bottom:8px}
+.mon-card{background:var(--s1);border:1px solid var(--bd);border-radius:var(--rad);padding:14px 16px}
+.mon-card h4{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--g2);margin-bottom:10px;font-weight:600;display:flex;align-items:center;gap:6px}
+.mon-card h4 .dot{width:6px;height:6px;border-radius:50%;background:var(--g1);box-shadow:0 0 6px var(--g1);flex-shrink:0}
+.mon-card h4 .dot.warn{background:var(--warn);box-shadow:0 0 6px var(--warn)}
+.mon-card h4 .dot.bad{background:var(--er);box-shadow:0 0 6px var(--er)}
+.mon-big{font-family:var(--fd);font-size:34px;font-weight:700;color:var(--g2);line-height:1}
+.mon-sub{font-size:11px;color:var(--dim);margin-top:3px}
+.mon-bar{height:4px;background:var(--s3);border-radius:2px;margin-top:8px;overflow:hidden}
+.mon-bar-f{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--g1),var(--g2));transition:width .6s ease}
+.mon-bar-f.warn{background:linear-gradient(90deg,var(--warn),var(--accent2))}
+.mon-bar-f.bad{background:linear-gradient(90deg,var(--er),#fb923c)}
+.mon-list{list-style:none;display:flex;flex-direction:column;gap:4px;font-size:12px}
+.mon-list li{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--bd);color:#9ab89a}
+.mon-list li:last-child{border-bottom:none}
+.mon-list li .val{color:var(--g3);font-weight:600;font-family:'DM Mono',monospace;font-size:11px}
+.mon-list li .val.warn{color:var(--warn)}.mon-list li .val.bad{color:var(--er)}
+.mon-span2{grid-column:span 2}
+.mon-span3{grid-column:span 3}
+.mon-query-list{list-style:none;display:flex;flex-direction:column;gap:3px;overflow-y:auto;max-height:180px}
+.mon-query-list li{background:var(--s2);border:1px solid var(--bd);border-radius:6px;padding:7px 11px;font-size:11px;display:flex;align-items:center;gap:8px}
+.mon-query-list .q-badge{font-family:'DM Mono',monospace;color:var(--g3);min-width:80px;font-size:11px}
+.mon-query-list .q-ms{color:var(--warn);font-size:10px;font-weight:600;min-width:40px;text-align:right}
+.mon-query-list .q-ms.fast{color:var(--ok)}
+.mon-query-list .q-text{color:var(--dim);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mon-refresh{font-size:11px;color:var(--dim);margin-left:auto;display:flex;align-items:center;gap:5px}
+.mon-refresh button{background:0;border:1px solid var(--bd);color:var(--dim);font-size:10px;padding:2px 8px;border-radius:4px;cursor:pointer;transition:.15s}
+.mon-refresh button:hover{border-color:var(--g1);color:var(--g2)}
+.tbl-health{width:100%;border-collapse:collapse;font-size:12px}
+.tbl-health th{background:var(--s2);color:var(--g2);padding:6px 12px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--bd);font-weight:600}
+.tbl-health td{padding:6px 12px;border-bottom:1px solid var(--bd);color:#b0c8b0}
+.tbl-health tr:hover td{background:var(--s2)}
+
+/* scrollbars */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:0}
+::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--dim2)}
+</style>
+</head>
+<body>
+<nav class="nav">
+  <div class="logo">
+    <span class="logo-i">♟</span>
+    <span class="logo-t"><span class="l1">Chess</span><span class="l2">Opener</span></span>
+  </div>
+  <ul>
+    <li><button class="nb on" data-v="explorer">🗂 Explorer</button></li>
+    <li><button class="nb" data-v="practice">♟ Practice</button></li>
+    <li><button class="nb" data-v="quiz">🃏 Quiz</button></li>
+    <li><button class="nb" data-v="notation">📐 Notation Guide</button></li>
+    <li><button class="nb" data-v="progress">📊 Progress</button></li>
+    <li><button class="nb" data-v="sqllab">🗄 SQL Lab</button></li>
+    <li><button class="nb" data-v="monitor">🖥 DB Monitor</button></li>
+  </ul>
+  <div class="nav-foot">v4.0 · Green Edition</div>
+</nav>
+
+<div class="shell">
+
+<!-- EXPLORER -->
+<section id="view-explorer" class="view on">
+  <div class="vh"><h1>Opening <em>Explorer</em></h1><p>Browse openings, watch demo videos, and learn key ideas before practicing</p></div>
+  <div class="exp-wrap">
+    <div class="op-list" id="op-list"></div>
+    <div class="op-detail" id="op-detail">
+      <div class="op-ph"><span>♟</span><p style="font-size:14px;color:var(--dim)">Select an opening to explore</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- PRACTICE -->
+<section id="view-practice" class="view">
+  <div class="vh"><h1>Practice <em>Mode</em></h1><p>Play through openings move by move on the interactive board</p></div>
+  <div class="prac-wrap">
+    <div class="prac-side">
+      <div class="lbl">Choose Opening</div>
+      <select id="prac-sel" class="sel"></select>
+      <button id="prac-rst" class="btn btn-o">↺ Reset Board</button>
+      <div class="mv-box">
+        <p class="mv-box-t">Move History</p>
+        <ol id="mv-hist" class="mv-list"></ol>
+      </div>
+      <div id="prac-hint" class="hint-b hid"></div>
+    </div>
+    <div class="board-col">
+      <div id="prac-board-wrap"></div>
+      <div id="prac-st" class="stat-bar">Select an opening and make your first move</div>
+    </div>
+  </div>
+</section>
+
+<!-- QUIZ -->
+<section id="view-quiz" class="view">
+  <div class="vh"><h1>Flashcard <em>Quiz</em></h1><p>Guess the next move — build muscle memory</p></div>
+  <div class="quiz-wrap">
+    <div class="quiz-meta">
+      <div class="sc-box"><span id="q-score">0</span><small>correct</small></div>
+      <div class="sc-box"><span id="q-total">0</span><small>attempted</small></div>
+      <div class="sc-box"><span id="q-streak">0</span><small>streak 🔥</small></div>
+    </div>
+    <div class="quiz-card">
+      <div id="quiz-board-wrap"></div>
+      <div class="q-prompt">
+        <p id="q-q">Press Start to begin</p>
+        <div id="q-opts" class="q-opts"></div>
+        <div id="q-fb" class="q-fb hid"></div>
+      </div>
+    </div>
+    <div class="quiz-ctrl">
+      <button id="q-start" class="btn btn-g">▶ Start Quiz</button>
+      <button id="q-next" class="btn btn-o hid">Next →</button>
+    </div>
+  </div>
+</section>
+
+<!-- NOTATION GUIDE -->
+<section id="view-notation" class="view">
+  <div class="vh"><h1>Notation <em>Guide</em></h1><p>Learn algebraic chess notation — how d4, Nf3, O-O and every symbol works</p></div>
+  <div class="guide-wrap">
+    <div class="notation-demo">
+      <h3>Interactive Demo — Click a move to see it on the board</h3>
+      <div class="nd-board-wrap">
+        <div id="nd-board-wrap"></div>
+        <div class="nd-desc" id="nd-steps"></div>
+      </div>
+    </div>
+    <div class="guide-grid">
+      <div class="g-card">
+        <h3>🔤 The Coordinate System</h3>
+        <p>The board uses a grid of <strong>files</strong> (columns a–h, left to right) and <strong>ranks</strong> (rows 1–8, bottom to top from White's view).</p>
+        <div class="g-code">  a b c d e f g h
+8 · · · · · · · ·
+7 · · · · · · · ·
+...
+1 · · · · · · · ·</div>
+        <p><strong>e4</strong> = file e, rank 4 (center square). Every square has a unique address.</p>
+      </div>
+      <div class="g-card">
+        <h3>♟ Piece Letters</h3>
+        <table class="g-table">
+          <tr><th>Symbol</th><th>Piece</th><th>Example</th></tr>
+          <tr><td>(none)</td><td>Pawn</td><td>e4, d5, c3</td></tr>
+          <tr><td>N</td><td>Knight</td><td>Nf3, Nc6</td></tr>
+          <tr><td>B</td><td>Bishop</td><td>Bc4, Bb5</td></tr>
+          <tr><td>R</td><td>Rook</td><td>Rd1, Ra8</td></tr>
+          <tr><td>Q</td><td>Queen</td><td>Qd1, Qh5</td></tr>
+          <tr><td>K</td><td>King</td><td>Ke2, Kg1</td></tr>
+        </table>
+      </div>
+      <div class="g-card">
+        <h3>⚡ Special Symbols</h3>
+        <table class="g-table">
+          <tr><th>Symbol</th><th>Meaning</th></tr>
+          <tr><td>x</td><td>Capture (Nxe5 = Knight captures on e5)</td></tr>
+          <tr><td>+</td><td>Check (Bb5+ = Bishop gives check)</td></tr>
+          <tr><td>#</td><td>Checkmate</td></tr>
+          <tr><td>O-O</td><td>Kingside castling</td></tr>
+          <tr><td>O-O-O</td><td>Queenside castling</td></tr>
+          <tr><td>=Q</td><td>Pawn promotion to Queen</td></tr>
+          <tr><td>!</td><td>Good move</td></tr>
+          <tr><td>?</td><td>Mistake</td></tr>
+        </table>
+      </div>
+      <div class="g-card">
+        <h3>🔢 Reading a Game Score</h3>
+        <p>Moves are numbered. White always goes first. Each turn shows White's move then Black's:</p>
+        <div class="g-code">1. e4   e5
+2. Nf3  Nc6
+3. Bb5  a6</div>
+        <p>Read as: "1. White plays e4, Black plays e5. 2. White plays Knight to f3, Black plays Knight to c6…"</p>
+        <p>If only one side's move is shown, use <strong>1…Nf6</strong> (the "…" means Black to move).</p>
+      </div>
+      <div class="g-card">
+        <h3>🎯 How to Read "d4"</h3>
+        <p>A pawn move — no piece letter means it's a pawn. The destination is <strong>d4</strong>:</p>
+        <p>→ Find file <strong>d</strong> (4th column from left)</p>
+        <p>→ Find rank <strong>4</strong> (4th row from bottom)</p>
+        <p>→ Move a pawn to that square</p>
+        <p>For <strong>Nf3</strong>: move the <strong>N</strong>ight to <strong>f3</strong>. Find file f, rank 3.</p>
+      </div>
+      <div class="g-card">
+        <h3>🔀 Disambiguation</h3>
+        <p>When two identical pieces can go to the same square, specify which one:</p>
+        <div class="g-code">Rfd1  — Rook on f-file goes to d1
+R1d4  — Rook on rank 1 goes to d4
+Nbd2  — Knight on b-file goes to d2</div>
+        <p>This only happens with pieces you have two of (both Rooks, both Bishops, both Knights).</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PROGRESS -->
+<section id="view-progress" class="view">
+  <div class="vh"><h1>Your <em>Progress</em></h1><p>Track mastery across all openings</p></div>
+  <div class="prog-wrap">
+    <div class="stats-row" id="stats-row"></div>
+    <div class="prog-grid" id="prog-grid"></div>
+    <button id="rst-prog" class="btn btn-r">🗑 Reset All Progress</button>
+  </div>
+</section>
+
+<!-- SQL LAB -->
+<section id="view-sqllab" class="view sql-view">
+  <div class="sql-inner">
+    <div class="vh"><h1>SQL <em>Lab</em></h1><p>Real SQLite in-browser — query chess data, practice optimization</p></div>
+    <div class="sql-body">
+      <div class="sql-side">
+        <div class="sql-ch-box" id="sql-chs"></div>
+        <div class="schema-box" id="schema-box"><h4>📋 Schema</h4><p style="font-size:11px;color:var(--dim)">Loading…</p></div>
+      </div>
+      <div class="sql-main">
+        <div class="ch-header" id="ch-hdr">
+          <h3>Welcome to SQL Lab</h3>
+          <p>Select a challenge or write a free query. Try: <code style="color:var(--g3)">SELECT * FROM games LIMIT 5;</code></p>
+        </div>
+        <div class="ed-wrap">
+          <div class="ed-top">
+            <span class="ed-top-l">SQL Editor · Ctrl+Enter to run · Tab to indent</span>
+            <div class="ed-acts">
+              <button class="btn btn-o btn-s" id="sql-clear">Clear</button>
+              <button class="btn btn-o btn-s" id="sql-hint">💡 Hint</button>
+              <button class="btn btn-g btn-s" id="sql-run">▶ Run</button>
+            </div>
+          </div>
+          <textarea id="sql-ed" class="sql-ed" spellcheck="false" placeholder="-- Write SQL here&#10;SELECT * FROM openings;"></textarea>
+        </div>
+        <div id="hint-card" class="hint-card hid"></div>
+        <div class="res-area">
+          <div class="res-top"><span>Results</span><span id="res-st" class="info">Ready</span></div>
+          <div class="res-scroll"><div id="res-content" class="res-msg">Run a query to see results</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DB MONITOR -->
+<section id="view-monitor" class="view mon-view">
+  <div class="mon-inner">
+    <div class="vh" style="display:flex;align-items:center;justify-content:space-between">
+      <div><h1>DB <em>Monitor</em></h1><p>Live metrics for the chess SQLite database — refreshes every 5 seconds</p></div>
+      <div class="mon-refresh"><span id="mon-last">Never refreshed</span><button id="mon-ref">↻ Refresh</button></div>
+    </div>
+    <div class="mon-body" id="mon-body">
+      <div class="res-msg" style="grid-column:span 3;padding:40px">⏳ Waiting for SQL Lab database to initialize…</div>
+    </div>
+  </div>
+</section>
+
+</div><!-- /shell -->
+
+<script>
+/* ══════════════════════════════════════
+   OPENINGS DATA  (+ YouTube video IDs)
+══════════════════════════════════════ */
+const OPENINGS=[
+  {id:"sicilian",name:"Sicilian Defense",eco:"B20–B99",color:"Black",
+   fm:["e4","c5","Nf3","d6","d4","cxd4","Nxd4","Nf6","Nc3"],
+   yt:"qM4e7g2RukI", ytTitle:"Sicilian Defense | 10-Minute Chess Openings (GothamChess)",
+   desc:"The most popular response to 1.e4. Black fights for the center from the flank, leading to sharp asymmetrical battles.",
+   ideas:["Control d4 without allowing e5","Queenside counterplay with b5 and a5","Sharp middlegame tactics on both wings","Many sub-variations: Najdorf, Dragon, Scheveningen"],
+   alts:["Najdorf (5…a6)","Dragon (5…g6)","Classical (5…Nc6)"]},
+  {id:"french",name:"French Defense",eco:"C00–C19",color:"Black",
+   fm:["e4","e6","d4","d5","Nc3","Nf6","Bg5"],
+   yt:"V3OhmZUfC-0", ytTitle:"French Defense | 10-Minute Chess Openings (GothamChess)",
+   desc:"Solid pawn chain e6–d5. Black concedes space but builds a resilient structure and counterattacks the queenside.",
+   ideas:["Establish pawn chain e6–d5","Counterattack d4 with …c5","Activate the light-squared bishop","Queenside counterplay"],
+   alts:["Winawer (3…Bb4)","Classical (3…Nf6)","Tarrasch (3…c5)"]},
+  {id:"italian",name:"Italian Game",eco:"C50–C59",color:"White",
+   fm:["e4","e5","Nf3","Nc6","Bc4","Bc5","c3","Nf6","d4"],
+   yt:"fEAOp3XO_4A", ytTitle:"Italian Game | Chess Openings (GothamChess)",
+   desc:"One of the oldest openings. White aims the bishop at f7 and builds a strong center with c3+d4.",
+   ideas:["Aim bishop at the weak f7 pawn","Build center with c3 and d4","Control the e5 square","Giuoco Piano leads to positional play"],
+   alts:["Evans Gambit (4.b4)","Two Knights (4…Nf6)","Giuoco Pianissimo (d3)"]},
+  {id:"ruy-lopez",name:"Ruy López",eco:"C60–C99",color:"White",
+   fm:["e4","e5","Nf3","Nc6","Bb5","a6","Ba4","Nf6","O-O"],
+   yt:"_Bs7UtQR58Y", ytTitle:"Chess Openings: Ruy Lopez (Dereque Kelley — Lichess featured)",
+   desc:"The 'Spanish Torture' — pressures Black's e5 pawn indirectly via the pin on Nc6. One of the deepest openings in theory.",
+   ideas:["Pressure e5 via the pin on Nc6","Play d4 to contest the center","Open lines for rooks","Long strategic battles reward patience"],
+   alts:["Marshall Attack (…d5)","Breyer (…Nb8)","Chigorin (…Na5)"]},
+  {id:"queens-gambit",name:"Queen's Gambit",eco:"D06–D69",color:"White",
+   fm:["d4","d5","c4","e6","Nc3","Nf6","Bg5","Be7","e3"],
+   yt:"YPGMnZyQEn8", ytTitle:"How To Play The Queen's Gambit (GothamChess)",
+   desc:"Offers a pawn to gain central control. If accepted White recaptures and dominates; if declined, positional battles ensue.",
+   ideas:["Control center with d4 and c4","Develop pieces to active squares","Open the c-file for queenside pressure","Target the isolated d-pawn"],
+   alts:["QGA (2…dxc4)","QGD (2…e6)","Slav (2…c6)","Tarrasch (2…c5)"]},
+  {id:"kings-indian",name:"King's Indian Defense",eco:"E60–E99",color:"Black",
+   fm:["d4","Nf6","c4","g6","Nc3","Bg7","e4","d6","Nf3","O-O"],
+   yt:"J3fOI5QFmVs", ytTitle:"King's Indian Defense | Chess Openings (GothamChess)",
+   desc:"Hyper-modern — Black lets White build a large center, then attacks it. The fianchettoed g7 bishop becomes devastating.",
+   ideas:["Let White build center, then counterattack with …e5 or …c5","The g7 bishop is a long-term weapon","Kingside attack with …f5–f4","Sharp imbalanced positions"],
+   alts:["Classical (6.Be2)","Sämisch (5.f3)","Four Pawns Attack (5.f4)"]},
+  {id:"caro-kann",name:"Caro-Kann Defense",eco:"B10–B19",color:"Black",
+   fm:["e4","c6","d4","d5","Nc3","dxe4","Nxe4","Bf5"],
+   yt:"hzlLGr9MVBY", ytTitle:"Caro-Kann Defense | 10-Minute Chess Openings (GothamChess)",
+   desc:"Solid response to 1.e4 — supports the d5 push with c6, avoiding the doubled pawns of the French Defense.",
+   ideas:["Support …d5 with …c6 for solid structure","Develop the light bishop before closing it in","Less committal than the French","Good endgame pawn structure"],
+   alts:["Classical (4…Bf5)","Advance (3.e5)","Exchange (3.exd5)"]},
+  {id:"london",name:"London System",eco:"D02",color:"White",
+   fm:["d4","d5","Bf4","Nf6","e3","e6","Nf3","c5","c3"],
+   yt:"Y3C5hOcKS80", ytTitle:"Learn the London System (GothamChess)",
+   desc:"A solid system-based opening. Easy to learn, hard to refute, leads to comfortable middlegames at all levels.",
+   ideas:["Develop bishop to f4 before closing it with e3","Build solid structure: e3, c3, Nf3","No long theory lines to memorize","Trade off the light-squared bishop"],
+   alts:["Colle System","Torre Attack","Barry Attack"]}
+];
+
+const PK="cop_prog_v4";
+const lp=()=>{try{return JSON.parse(localStorage.getItem(PK))||{}}catch{return{}}};
+const sp=d=>localStorage.setItem(PK,JSON.stringify(d));
+function up(id,ok){const p=lp();if(!p[id])p[id]={a:0,c:0};p[id].a++;if(ok)p[id].c++;sp(p)}
+
+/* ══════════════════════════════════════
+   BOARD ENGINE
+══════════════════════════════════════ */
+// Aesthetic Unicode pieces - using standard Unicode chess symbols
+const GP={
+  wK:'♔',wQ:'♕',wR:'♖',wB:'♗',wN:'♘',wP:'♙',
+  bK:'♚',bQ:'♛',bR:'♜',bB:'♝',bN:'♞',bP:'♟'
+};
+const WP=new Set(['wK','wQ','wR','wB','wN','wP']);
+const IB=[
+  ['bR','bN','bB','bQ','bK','bB','bN','bR'],
+  ['bP','bP','bP','bP','bP','bP','bP','bP'],
+  Array(8).fill(null),Array(8).fill(null),
+  Array(8).fill(null),Array(8).fill(null),
+  ['wP','wP','wP','wP','wP','wP','wP','wP'],
+  ['wR','wN','wB','wQ','wK','wB','wN','wR']
+];
+const FS='abcdefgh',RK='87654321';
+
+// Builds a board with surrounding coordinate labels
+// containerId: where to inject the wrapper div
+// small: use small squares
+function makeBoard(containerId,small=false){
+  const wrap=document.getElementById(containerId);
+  if(!wrap)return null;
+  const sqSize=small?36:56;
+
+  // Build DOM
+  const outer=document.createElement('div');
+  outer.className='board-wrap'+(small?' sm':'');
+
+  // files row (top labels)
+  const filesTop=document.createElement('div');
+  filesTop.className='files-row';
+  filesTop.style.paddingLeft='22px';
+  'abcdefgh'.split('').forEach(f=>{
+    const s=document.createElement('span');
+    s.textContent=f;
+    s.style.width=sqSize+'px';
+    s.style.fontSize=small?'9px':'11px';
+    filesTop.appendChild(s);
+  });
+  outer.appendChild(filesTop);
+
+  const mid=document.createElement('div');
+  mid.className='board-row';
+
+  // ranks col (left labels)
+  const ranksLeft=document.createElement('div');
+  ranksLeft.className='ranks-col';
+  ranksLeft.style.width='22px';
+  '87654321'.split('').forEach(r=>{
+    const s=document.createElement('span');
+    s.textContent=r;
+    s.style.height=sqSize+'px';
+    s.style.fontSize=small?'9px':'11px';
+    ranksLeft.appendChild(s);
+  });
+  mid.appendChild(ranksLeft);
+
+  // board grid
+  const boardEl=document.createElement('div');
+  boardEl.className='board'+(small?' sm-board':'');
+  boardEl.id='board-'+containerId;
+  mid.appendChild(boardEl);
+  outer.appendChild(mid);
+  wrap.appendChild(outer);
+
+  return boardEl.id;
+}
+
+class CB{
+  constructor(elId){
+    this.el=document.getElementById(elId);
+    this.b=IB.map(r=>[...r]);
+    this.s=null;this.lm=null;this.h=[];this.onMove=null;
+    this._r();
+  }
+  reset(){this.b=IB.map(r=>[...r]);this.s=null;this.lm=null;this.h=[];this._r()}
+  _r(){
+    if(!this.el)return;
+    this.el.innerHTML='';
+    for(let r=0;r<8;r++)for(let c=0;c<8;c++){
+      const sq=document.createElement('div');
+      sq.className='sq '+((r+c)%2===0?'l':'d');
+      if(this.lm){const[a,b,d,e]=this.lm;if((r===a&&c===b)||(r===d&&c===e))sq.classList.add('lm')}
+      if(this.s&&this.s[0]===r&&this.s[1]===c)sq.classList.add('sel');
+      if(this.h.some(([x,y])=>x===r&&y===c))sq.classList.add('hl');
+      const p=this.b[r][c];
+      if(p){
+        const sp=document.createElement('span');
+        sp.className='pc '+(WP.has(p)?'white':'black');
+        sp.textContent=GP[p];
+        sq.appendChild(sp);
+      }
+      sq.addEventListener('click',()=>this._c(r,c));
+      this.el.appendChild(sq);
+    }
+  }
+  _c(r,c){
+    if(this.s){
+      const[sr,sc]=this.s;
+      if(this.h.some(([x,y])=>x===r&&y===c)){
+        const n=this._n(sr,sc,r,c);
+        this._mv(sr,sc,r,c);this.s=null;this.h=[];this._r();
+        if(this.onMove)this.onMove(sr,sc,r,c,n);return;
+      }
+      this.s=null;this.h=[];
+    }
+    if(this.b[r][c]){this.s=[r,c];this.h=this._lg(r,c)}
+    this._r();
+  }
+  _mv(fr,fc,tr,tc){
+    this.b[tr][tc]=this.b[fr][fc];this.b[fr][fc]=null;this.lm=[fr,fc,tr,tc];
+    if(this.b[tr][tc]==='wP'&&tr===0)this.b[tr][tc]='wQ';
+    if(this.b[tr][tc]==='bP'&&tr===7)this.b[tr][tc]='bQ';
+  }
+  an(n,color){
+    const cl=n.replace(/[+#x]/g,'').replace('=Q','');
+    const pre=color==='white'?'w':'b';
+    if(cl==='O-O'||cl==='OO'){const rw=color==='white'?7:0;this._mv(rw,4,rw,6);this._mv(rw,7,rw,5);this._r();return true}
+    if(cl==='O-O-O'||cl==='OOO'){const rw=color==='white'?7:0;this._mv(rw,4,rw,2);this._mv(rw,0,rw,3);this._r();return true}
+    const dest=cl.slice(-2);
+    const tc=FS.indexOf(dest[0]),tr=RK.indexOf(dest[1]);
+    if(tc<0||tr<0)return false;
+    const pt='KQRBN'.includes(cl[0])&&cl[0]===cl[0].toUpperCase()?cl[0]:'P';
+    for(let r=0;r<8;r++)for(let c=0;c<8;c++){
+      if(this.b[r][c]!==pre+pt)continue;
+      if(this._lg(r,c).some(([a,b])=>a===tr&&b===tc)){this._mv(r,c,tr,tc);this._r();return true}
+    }
+    return false;
+  }
+  _n(fr,fc,tr,tc){
+    const p=this.b[fr][fc],dest=FS[tc]+RK[tr];
+    if(p&&p[1]==='P')return fc!==tc?FS[fc]+'x'+dest:dest;
+    return(p?p[1]:'')+(this.b[tr][tc]?'x':'')+dest;
+  }
+  _lg(r,c){
+    const p=this.b[r][c];if(!p)return[];
+    const t=p[1],col=p[0],mv=[];
+    const iB=(r,c)=>r>=0&&r<8&&c>=0&&c<8;
+    const iE=(r,c)=>iB(r,c)&&!this.b[r][c];
+    const iX=(r,c)=>iB(r,c)&&this.b[r][c]&&this.b[r][c][0]!==col;
+    const cG=(r,c)=>iE(r,c)||iX(r,c);
+    const sl=ds=>{for(const[dr,dc]of ds){let nr=r+dr,nc=c+dc;while(iB(nr,nc)){if(this.b[nr][nc]){if(iX(nr,nc))mv.push([nr,nc]);break}mv.push([nr,nc]);nr+=dr;nc+=dc;}}};
+    const jm=ds=>{for(const[dr,dc]of ds){const nr=r+dr,nc=c+dc;if(iB(nr,nc)&&cG(nr,nc))mv.push([nr,nc]);}};
+    if(t==='P'){const d=col==='w'?-1:1,sr=col==='w'?6:1;if(iE(r+d,c)){mv.push([r+d,c]);if(r===sr&&iE(r+2*d,c))mv.push([r+2*d,c])}if(iX(r+d,c-1))mv.push([r+d,c-1]);if(iX(r+d,c+1))mv.push([r+d,c+1])}
+    if(t==='N')jm([[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]]);
+    if(t==='B')sl([[-1,-1],[-1,1],[1,-1],[1,1]]);
+    if(t==='R')sl([[-1,0],[1,0],[0,-1],[0,1]]);
+    if(t==='Q')sl([[-1,-1],[-1,1],[1,-1],[1,1],[-1,0],[1,0],[0,-1],[0,1]]);
+    if(t==='K')jm([[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]]);
+    return mv;
+  }
+}
+
+/* ══════════════════════════════════════
+   NAV
+══════════════════════════════════════ */
+document.querySelectorAll('.nb').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const v=btn.dataset.v;
+    document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));
+    btn.classList.add('on');
+    document.querySelectorAll('.view').forEach(s=>s.classList.remove('on'));
+    document.getElementById('view-'+v).classList.add('on');
+    if(v==='progress')renderProg();
+    if(v==='monitor')renderMonitor();
+    if(v==='notation')initNotation();
+  });
+});
+
+/* ══════════════════════════════════════
+   EXPLORER
+══════════════════════════════════════ */
+(()=>{
+  const list=document.getElementById('op-list');
+  const detail=document.getElementById('op-detail');
+
+  // Fetch opening stats from Lichess Opening Explorer API
+  async function fetchLichessStats(op){
+    const moves=op.fm.slice(0,4).join(' ');
+    const url=`https://explorer.lichess.ovh/lichess?variant=standard&speeds=rapid,classical&ratings=2000,2200,2500&moves=5&fen=rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1`;
+    // We use the opening name endpoint instead (CORS-friendly)
+    try{
+      const r=await fetch(`https://explorer.lichess.ovh/lichess?variant=standard&play=${op.fm.slice(0,6).join(',')}&topGames=0&recentGames=0`);
+      if(!r.ok)throw new Error('Network error');
+      const d=await r.json();
+      return d;
+    }catch(e){return null}
+  }
+
+  OPENINGS.forEach(op=>{
+    const el=document.createElement('div');
+    el.className='op-item';
+    el.innerHTML=`<h3>${op.name}</h3><p>${op.eco} · ${op.color}</p>`;
+    el.addEventListener('click',async()=>{
+      document.querySelectorAll('.op-item').forEach(i=>i.classList.remove('on'));
+      el.classList.add('on');
+      showDetail(op);
+    });
+    list.appendChild(el);
+  });
+
+  function showDetail(op){
+    const badges=op.fm.map((m,i)=>`<span class="mv-badge"><span class="mn">${i%2===0?(Math.floor(i/2)+1)+'.':''}</span>${m}</span>`).join('');
+    const ideas=op.ideas.map(k=>`<li>${k}</li>`).join('');
+    const alts=op.alts?`<div class="d-section"><h4>Key Variations</h4><ul>${op.alts.map(a=>`<li>${a}</li>`).join('')}</ul></div>`:'';
+
+    detail.innerHTML=`
+      <div class="d-eco">${op.eco} · ${op.color} plays</div>
+      <div class="d-name">${op.name}</div>
+      <div class="d-video">
+        <div class="d-video-hdr">▶ Demo Video — ${op.name}</div>
+        <a class="d-video-thumb" href="https://www.youtube.com/watch?v=${op.yt}" target="_blank" rel="noopener" title="${op.ytTitle}">
+          <img src="https://img.youtube.com/vi/${op.yt}/hqdefault.jpg" alt="${op.name} chess opening tutorial" loading="lazy"/>
+          <div class="d-video-play">
+            <div class="d-video-play-btn">▶</div>
+            <span class="d-video-label">Watch on YouTube — ${op.ytTitle.split('(')[0].trim()}</span>
+          </div>
+        </a>
+      </div>
+      <div class="d-moves">${badges}</div>
+      <p class="d-desc">${op.desc}</p>
+      <div class="fetch-bar">
+        <button class="btn btn-o btn-s" id="fetch-btn">📡 Fetch Live Stats from Lichess</button>
+        <span class="fetch-status" id="fetch-status">Click to load real game data</span>
+      </div>
+      <div id="lichess-stats"></div>
+      <div class="d-section"><h4>Key Ideas</h4><ul>${ideas}</ul></div>
+      ${alts}
+      <button class="btn btn-g" style="margin-top:16px" data-id="${op.id}">♟ Practice This Opening</button>`;
+
+    detail.querySelector('.btn-g').addEventListener('click',()=>{
+      document.querySelector('[data-v="practice"]').click();
+      const s=document.getElementById('prac-sel');s.value=op.id;s.dispatchEvent(new Event('change'));
+    });
+
+    document.getElementById('fetch-btn').addEventListener('click',async()=>{
+      const st=document.getElementById('fetch-status');
+      const box=document.getElementById('lichess-stats');
+      st.textContent='Fetching from lichess.org…';st.className='fetch-status';
+      try{
+        const data=await fetchLichessStats(op);
+        if(!data){throw new Error('No data')}
+        const total=(data.white||0)+(data.draws||0)+(data.black||0)||1;
+        const wp=Math.round((data.white||0)/total*100);
+        const dp=Math.round((data.draws||0)/total*100);
+        const bp=Math.round((data.black||0)/total*100);
+        box.innerHTML=`<div class="d-section"><h4>📊 Lichess Stats (Rapid/Classical, 2000+ rated)</h4>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+            <div class="mv-badge" style="color:#d4f7a0">⬜ White wins: ${wp}%</div>
+            <div class="mv-badge" style="color:#9ab89a">½ Draws: ${dp}%</div>
+            <div class="mv-badge" style="color:#6b8f6b">⬛ Black wins: ${bp}%</div>
+            <div class="mv-badge">🎮 ${(total).toLocaleString()} games sampled</div>
+          </div>
+          <div style="display:flex;height:8px;border-radius:4px;overflow:hidden;margin-bottom:12px">
+            <div style="width:${wp}%;background:#e8e4d8"></div>
+            <div style="width:${dp}%;background:#6b8f6b"></div>
+            <div style="width:${bp}%;background:#2a3a2a"></div>
+          </div>
+          ${data.moves&&data.moves.length?`<h4 style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--g2);margin-bottom:6px;font-weight:600">Most Popular Continuations</h4>
+          <div style="display:flex;flex-wrap:wrap;gap:5px">${data.moves.slice(0,6).map(m=>`<span class="mv-badge">${m.san} <span style="color:var(--dim)">${(m.white+m.draws+m.black).toLocaleString()}</span></span>`).join('')}</div>`:''}
+        </div>`;
+        st.textContent='✓ Data loaded from lichess.org';st.className='fetch-status ok';
+      }catch(e){
+        box.innerHTML='';
+        st.textContent='⚠ Could not fetch — check your internet connection';
+        st.className='fetch-status bad';
+      }
+    });
+  }
+})();
+
+/* ══════════════════════════════════════
+   PRACTICE (uses board wrapper)
+══════════════════════════════════════ */
+(()=>{
+  const boardId=makeBoard('prac-board-wrap',false);
+  const board=new CB(boardId);
+  let cur=null,idx=0;
+  const sel=document.getElementById('prac-sel');
+  OPENINGS.forEach(op=>{const o=document.createElement('option');o.value=op.id;o.textContent=op.name;sel.appendChild(o)});
+  const setSt=(msg,t)=>{const b=document.getElementById('prac-st');b.innerHTML=msg;b.className='stat-bar'+(t?' '+t:'')};
+  const addMv=(n,i)=>{
+    const list=document.getElementById('mv-hist');
+    const mn=Math.ceil(i/2),isW=i%2===1;
+    if(isW){const li=document.createElement('li');li.innerHTML=`<span class="mn">${mn}.</span>${n}`;li.id='pm'+i;list.appendChild(li)}
+    else{const prev=document.getElementById('pm'+(i-1));if(prev)prev.innerHTML+=`  <span style="color:var(--txt)">${n}</span>`}
+    list.scrollTop=list.scrollHeight;
+  };
+  const load=id=>{
+    cur=OPENINGS.find(o=>o.id===id);if(!cur)return;
+    idx=0;board.reset();
+    document.getElementById('mv-hist').innerHTML='';
+    document.getElementById('prac-hint').classList.add('hid');
+    setSt(`Your turn — play <strong>${cur.fm[0]}</strong> to start the ${cur.name}`,'');
+  };
+  board.onMove=(fr,fc,tr,tc,nota)=>{
+    if(!cur)return;
+    const exp=cur.fm[idx];
+    const dp=nota.slice(-2),de=exp.replace(/[+#Nx]/g,'').slice(-2);
+    if(dp===de){
+      idx++;addMv(nota,idx);up(cur.id,true);
+      document.getElementById('prac-hint').classList.add('hid');
+      if(idx>=cur.fm.length){setSt(`✓ Opening complete! You played the ${cur.name} perfectly.`,'ok');return}
+      const nxt=cur.fm[idx],col=idx%2===0?'white':'black';
+      setTimeout(()=>{board.an(nxt,col);idx++;addMv(nxt,idx);
+        if(idx>=cur.fm.length)setSt(`✓ Complete! Well done.`,'ok');
+        else setSt(`Good! Now play <strong>${cur.fm[idx]}</strong>`,'');
+      },380);
+    }else{
+      up(cur.id,false);board.reset();
+      for(let i=0;i<idx;i++){const c=i%2===0?'white':'black';board.an(cur.fm[i],c)}
+      setSt(`✗ Not quite — expected <strong>${exp}</strong>`,'bad');
+      const h=document.getElementById('prac-hint');h.classList.remove('hid');h.textContent=`💡 Hint: the correct move is ${exp}`;
+    }
+  };
+  sel.addEventListener('change',()=>load(sel.value));
+  document.getElementById('prac-rst').addEventListener('click',()=>{if(cur)load(cur.id)});
+  load(OPENINGS[0].id);
+  // Update stat-bar width to match board
+  document.getElementById('prac-st').style.width='472px';
+})();
+
+/* ══════════════════════════════════════
+   QUIZ
+══════════════════════════════════════ */
+(()=>{
+  const boardId=makeBoard('quiz-board-wrap',true);
+  const qb=new CB(boardId);
+  let score=0,total=0,streak=0,curQ=null;
+  const upSt=()=>{document.getElementById('q-score').textContent=score;document.getElementById('q-total').textContent=total;document.getElementById('q-streak').textContent=streak};
+  const bldOpts=correct=>{
+    const pool=new Set([correct]);
+    OPENINGS.forEach(op=>op.fm.forEach(m=>{if(m!==correct&&pool.size<4)pool.add(m)}));
+    ['Nf3','e4','d4','Bc4','c3','O-O','Bg5','f4','a3'].forEach(m=>{if(m!==correct&&pool.size<4)pool.add(m)});
+    return[...pool].sort(()=>Math.random()-.5);
+  };
+  const nextQ=()=>{
+    document.getElementById('q-fb').classList.add('hid');
+    document.getElementById('q-next').classList.add('hid');
+    document.getElementById('q-opts').innerHTML='';
+    const op=OPENINGS[Math.floor(Math.random()*OPENINGS.length)];
+    const mi=Math.floor(Math.random()*Math.min(op.fm.length-1,6));
+    qb.reset();for(let i=0;i<mi;i++){const c=i%2===0?'white':'black';qb.an(op.fm[i],c)}
+    const correct=op.fm[mi];curQ={op,mi,correct};
+    document.getElementById('q-q').innerHTML=`<strong>${op.name}</strong><br>Move ${Math.floor(mi/2)+1} · ${mi%2===0?'White':'Black'} to play.<br><em style="color:var(--dim);font-size:12px">What is the next move?</em>`;
+    const cont=document.getElementById('q-opts');
+    bldOpts(correct).forEach(o=>{
+      const btn=document.createElement('button');btn.className='q-opt';btn.textContent=o;
+      btn.addEventListener('click',()=>{
+        const ok=o===correct;
+        document.querySelectorAll('.q-opt').forEach(b=>{b.disabled=true;if(b.textContent===correct)b.classList.add('ok');if(b.textContent===o&&!ok)b.classList.add('bad')});
+        total++;if(ok){score++;streak++}else streak=0;upSt();up(curQ.op.id,ok);
+        const fb=document.getElementById('q-fb');fb.classList.remove('hid','ok','bad');fb.classList.add(ok?'ok':'bad');
+        fb.textContent=ok?`✓ Correct!${streak>1?` 🔥 ${streak} in a row`:''}`:` ✗ The correct move was ${correct}.`;
+        qb.an(correct,curQ.mi%2===0?'white':'black');
+        document.getElementById('q-next').classList.remove('hid');
+      });
+      cont.appendChild(btn);
+    });
+  };
+  document.getElementById('q-start').addEventListener('click',()=>{score=0;total=0;streak=0;upSt();document.getElementById('q-start').classList.add('hid');nextQ()});
+  document.getElementById('q-next').addEventListener('click',nextQ);
+})();
+
+/* ══════════════════════════════════════
+   NOTATION GUIDE — Interactive board
+══════════════════════════════════════ */
+let ndBoard=null,ndBuilt=false;
+function initNotation(){
+  if(ndBuilt)return;ndBuilt=true;
+  const boardId=makeBoard('nd-board-wrap',false);
+  ndBoard=new CB(boardId);
+  ndBoard.onMove=null; // demo only
+
+  const steps=[
+    {mv:'e4',   col:'white', label:'1. e4',  txt:'White pawn moves to <strong>e4</strong>. "e" = file e (5th column), "4" = rank 4. No piece letter = pawn.'},
+    {mv:'e5',   col:'black', label:'1… e5',  txt:'Black replies e5. The "…" means it\'s Black\'s move. Mirror of White\'s move.'},
+    {mv:'Nf3',  col:'white', label:'2. Nf3', txt:'<strong>N</strong>f3 = Knight to f3. "N" = Knight (we use N because K is for King). Knight jumps in an L-shape.'},
+    {mv:'Nc6',  col:'black', label:'2… Nc6', txt:'Black develops the other knight to c6. Both players are following the principle: develop knights before bishops.'},
+    {mv:'Bb5',  col:'white', label:'3. Bb5', txt:'<strong>B</strong>b5 = Bishop to b5. This is the Ruy López! The bishop pins Black\'s knight against the king.'},
+    {mv:'a6',   col:'black', label:'3… a6',  txt:'a6 = pawn to a6. Black challenges the bishop. A pawn move with no piece letter — just the destination square.'},
+    {mv:'Ba4',  col:'white', label:'4. Ba4', txt:'Bishop retreats to a4, maintaining the pin. No capture symbol because no piece was taken.'},
+    {mv:'Nf6',  col:'black', label:'4… Nf6', txt:'Black develops the other knight, attacking White\'s e4 pawn. Active piece development!'},
+    {mv:'O-O',  col:'white', label:'5. O-O', txt:'<strong>O-O</strong> = Kingside castling. King moves two squares toward the rook, rook jumps over. King is now safe!'},
+  ];
+
+  const stepsEl=document.getElementById('nd-steps');
+  steps.forEach((step,i)=>{
+    const div=document.createElement('div');
+    div.className='nd-step';
+    div.innerHTML=`<span class="nd-mv">${step.label}</span><span class="nd-txt">${step.txt}</span>`;
+    div.addEventListener('click',()=>{
+      document.querySelectorAll('.nd-step').forEach(s=>s.classList.remove('on'));
+      div.classList.add('on');
+      // Replay board to this step
+      ndBoard.reset();
+      for(let j=0;j<=i;j++){ndBoard.an(steps[j].mv,steps[j].col)}
+    });
+    stepsEl.appendChild(div);
+  });
+  // Highlight first step
+  stepsEl.firstChild.click();
+}
+
+/* ══════════════════════════════════════
+   PROGRESS
+══════════════════════════════════════ */
+function renderProg(){
+  const prog=lp();let ta=0,tc=0,mastered=0;
+  OPENINGS.forEach(op=>{const p=prog[op.id]||{a:0,c:0};ta+=p.a;tc+=p.c;const pct=p.a>0?Math.round(p.c/p.a*100):0;if(pct>=80&&p.a>=5)mastered++});
+  const acc=ta>0?Math.round(tc/ta*100):0;
+  document.getElementById('stats-row').innerHTML=`
+    <div class="st-card"><div class="st-v">${ta}</div><div class="st-l">Moves Played</div></div>
+    <div class="st-card"><div class="st-v">${acc}%</div><div class="st-l">Accuracy</div></div>
+    <div class="st-card"><div class="st-v">${mastered}</div><div class="st-l">Mastered</div></div>
+    <div class="st-card"><div class="st-v">${OPENINGS.length}</div><div class="st-l">Openings</div></div>`;
+  const grid=document.getElementById('prog-grid');grid.innerHTML='';
+  OPENINGS.forEach(op=>{
+    const p=prog[op.id]||{a:0,c:0};const pct=p.a>0?Math.round(p.c/p.a*100):0;
+    grid.innerHTML+=`<div class="prog-card"><h3>${op.name}${pct>=80&&p.a>=5?' ⭐':''}</h3>
+      <div class="pb-bg"><div class="pb-f" style="width:${pct}%"></div></div>
+      <div class="pb-pct"><span>${p.c}/${p.a} correct</span><strong>${pct}%</strong></div></div>`;
+  });
+}
+document.getElementById('rst-prog').addEventListener('click',()=>{if(confirm('Reset all progress?')){localStorage.removeItem(PK);renderProg()}});
+
+/* ══════════════════════════════════════
+   SQL LAB
+══════════════════════════════════════ */
+let sqlDB=null; // shared with monitor
+
+(async()=>{
+  const CHS=[
+    {id:1,lv:'easy',title:'List All Openings',desc:'Retrieve all openings. Show name, ECO code, and which color plays them. Order by name.',
+     hint:'Use SELECT with specific columns. Avoid SELECT * in production.',
+     sol:'SELECT name, eco, color\nFROM openings\nORDER BY name;'},
+    {id:2,lv:'easy',title:'Count Games per Opening',desc:'How many games were played with each opening? Show opening name and game count, most played first.',
+     hint:'JOIN openings with games, GROUP BY opening, COUNT(*), ORDER BY DESC.',
+     sol:'SELECT o.name, COUNT(g.id) AS game_count\nFROM openings o\nLEFT JOIN games g ON g.opening_id = o.id\nGROUP BY o.id\nORDER BY game_count DESC;'},
+    {id:3,lv:'medium',title:"White Win Rate by Opening",desc:"Calculate White's win rate per opening. Only openings with ≥ 3 games, sorted by win rate.",
+     hint:"Use SUM(CASE WHEN result='1-0' THEN 1 ELSE 0 END)/COUNT(*). Filter with HAVING.",
+     sol:`SELECT o.name, COUNT(*) AS games,\n  ROUND(100.0*SUM(CASE WHEN g.result='1-0' THEN 1 ELSE 0 END)/COUNT(*),1) AS white_win_pct\nFROM games g JOIN openings o ON g.opening_id=o.id\nGROUP BY o.id HAVING games>=3\nORDER BY white_win_pct DESC;`},
+    {id:4,lv:'medium',title:'Top 5 Players by Peak ELO',desc:'Find the top 5 players by their highest ELO ever recorded.',
+     hint:'Use MAX() with GROUP BY, then ORDER BY and LIMIT.',
+     sol:`SELECT p.name, MAX(pr.elo) AS peak_elo\nFROM players p\nJOIN player_ratings pr ON pr.player_id=p.id\nGROUP BY p.id ORDER BY peak_elo DESC LIMIT 5;`},
+    {id:5,lv:'medium',title:'Games per Opening per Year',desc:"Game counts by opening and year. Only combos with more than 1 game.",
+     hint:"Use strftime('%Y', played_date). GROUP BY two columns.",
+     sol:`SELECT o.name, strftime('%Y',g.played_date) AS year, COUNT(*) AS games\nFROM games g JOIN openings o ON g.opening_id=o.id\nGROUP BY o.id,year HAVING games>1\nORDER BY year,games DESC;`},
+    {id:6,lv:'hard',title:'Above-Average Win Rate (Subquery)',desc:"Find openings whose White win rate exceeds the overall average. Use a subquery.",
+     hint:"Compute the average in a subquery inside HAVING.",
+     sol:`SELECT o.name,\n  ROUND(100.0*SUM(CASE WHEN g.result='1-0' THEN 1 ELSE 0 END)/COUNT(*),1) AS win_pct\nFROM games g JOIN openings o ON g.opening_id=o.id\nGROUP BY o.id\nHAVING win_pct>(SELECT ROUND(100.0*SUM(CASE WHEN result='1-0' THEN 1 ELSE 0 END)/COUNT(*),1) FROM games)\nORDER BY win_pct DESC;`},
+    {id:7,lv:'hard',title:'Running Game Count (Window)',desc:'Show each game with a cumulative running total in date order.',
+     hint:'Use COUNT(*) OVER (ORDER BY played_date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW).',
+     sol:`SELECT g.played_date, o.name AS opening,\n  COUNT(*) OVER (ORDER BY g.played_date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS running_total\nFROM games g JOIN openings o ON g.opening_id=o.id\nORDER BY g.played_date;`},
+    {id:8,lv:'hard',title:'CTE: Players Above Average Wins',desc:'Using a CTE, find players with more wins than the average wins per player.',
+     hint:'WITH wins AS (...), then filter outer query against AVG from the CTE.',
+     sol:`WITH wins AS (\n  SELECT p.name, COUNT(*) AS win_count\n  FROM games g\n  JOIN players p ON (g.white_player_id=p.id AND g.result='1-0') OR (g.black_player_id=p.id AND g.result='0-1')\n  GROUP BY p.id\n)\nSELECT name,win_count FROM wins\nWHERE win_count>(SELECT AVG(win_count) FROM wins)\nORDER BY win_count DESC;`}
+  ];
+
+  let activeCh=null;
+
+  async function initDB(){
+    const SQL=await initSqlJs({locateFile:f=>`https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.2/${f}`});
+    sqlDB=new SQL.Database();
+    sqlDB.run(`
+      CREATE TABLE openings(id INTEGER PRIMARY KEY,name TEXT,eco TEXT,color TEXT,first_moves TEXT);
+      CREATE TABLE players(id INTEGER PRIMARY KEY,name TEXT,country TEXT);
+      CREATE TABLE games(id INTEGER PRIMARY KEY,opening_id INTEGER,white_player_id INTEGER,black_player_id INTEGER,result TEXT,played_date TEXT,moves INTEGER);
+      CREATE TABLE player_ratings(id INTEGER PRIMARY KEY,player_id INTEGER,elo INTEGER,recorded_date TEXT);
+      CREATE INDEX idx_g_op ON games(opening_id);
+      CREATE INDEX idx_g_dt ON games(played_date);
+      CREATE INDEX idx_r_pl ON player_ratings(player_id);
+    `);
+    const os=sqlDB.prepare('INSERT INTO openings VALUES(?,?,?,?,?)');
+    OPENINGS.forEach((op,i)=>os.run([i+1,op.name,op.eco,op.color,op.fm.slice(0,4).join(' ')]));os.free();
+    const ps=sqlDB.prepare('INSERT INTO players VALUES(?,?,?)');
+    [['Magnus Carlsen','Norway'],['Fabiano Caruana','USA'],['Hikaru Nakamura','USA'],
+     ['Ding Liren','China'],['Ian Nepomniachtchi','Russia'],['Anish Giri','Netherlands'],
+     ['Levon Aronian','USA'],['Wesley So','USA'],['Viswanathan Anand','India'],['Garry Kasparov','Russia']
+    ].forEach(([n,c],i)=>ps.run([i+1,n,c]));ps.free();
+    const gs=sqlDB.prepare('INSERT INTO games VALUES(?,?,?,?,?,?,?)');
+    const res=['1-0','0-1','1/2-1/2'];let gid=1;
+    for(let y=2019;y<=2024;y++)for(let m=1;m<=10;m++){
+      const oi=(gid%OPENINGS.length)+1;
+      let wp=Math.floor(Math.random()*10)+1,bp=Math.floor(Math.random()*10)+1;
+      while(bp===wp)bp=Math.floor(Math.random()*10)+1;
+      const r=res[Math.floor(Math.random()*3)];
+      gs.run([gid,oi,wp,bp,r,`${y}-${String(m).padStart(2,'0')}-${String(Math.floor(Math.random()*28)+1).padStart(2,'0')}`,Math.floor(Math.random()*60)+20]);
+      gid++;
+    }
+    gs.free();
+    const rs=sqlDB.prepare('INSERT INTO player_ratings VALUES(?,?,?,?)');let rid=1;
+    for(let pid=1;pid<=10;pid++)for(let y=2019;y<=2024;y++)rs.run([rid++,pid,2600+Math.floor(Math.random()*400),`${y}-01-01`]);
+    rs.free();
+  }
+
+  function renderSchema(){
+    document.getElementById('schema-box').innerHTML=`<h4>📋 Schema</h4>`+
+    [{t:'openings',c:['id PK','name','eco','color','first_moves']},
+     {t:'players',c:['id PK','name','country']},
+     {t:'games',c:['id PK','opening_id FK','white_player_id FK','black_player_id FK','result','played_date','moves']},
+     {t:'player_ratings',c:['id PK','player_id FK','elo','recorded_date']}
+    ].map(({t,c})=>`<div class="tbl-s"><h5>${t}</h5><ul>${c.map(x=>`<li>${x}</li>`).join('')}</ul></div>`).join('');
+  }
+
+  function renderChs(){
+    const cont=document.getElementById('sql-chs');
+    CHS.forEach(ch=>{
+      const el=document.createElement('div');el.className='ch-item';
+      el.innerHTML=`<h4>${ch.title}<span class="badge b${ch.lv[0]}">${ch.lv}</span></h4><p>${ch.desc.slice(0,54)}…</p>`;
+      el.addEventListener('click',()=>{
+        document.querySelectorAll('.ch-item').forEach(e=>e.classList.remove('on'));el.classList.add('on');
+        activeCh=ch;
+        document.getElementById('ch-hdr').innerHTML=`<h3>${ch.title}<span class="badge b${ch.lv[0]}" style="margin-left:8px">${ch.lv}</span></h3><p>${ch.desc}</p><p class="ch-tip">🎯 Write SQL below and press Run (Ctrl+Enter).</p>`;
+        document.getElementById('sql-ed').value='';
+        document.getElementById('hint-card').classList.add('hid');
+        document.getElementById('res-content').innerHTML='<div class="res-msg">Run your query to see results</div>';
+        setSt('Ready','info');
+      });
+      cont.appendChild(el);
+    });
+  }
+
+  const setSt=(msg,t)=>{const el=document.getElementById('res-st');el.textContent=msg;el.className='';if(t)el.classList.add(t)};
+
+  const runQ=()=>{
+    if(!sqlDB){setSt('DB loading…','info');return}
+    const sql=document.getElementById('sql-ed').value.trim();
+    if(!sql){setSt('Write a query first','info');return}
+    const t0=performance.now();
+    try{
+      const rs=sqlDB.exec(sql);const ms=(performance.now()-t0).toFixed(2);
+      if(!rs.length){document.getElementById('res-content').innerHTML='<div class="res-msg ok">✓ Query executed — no rows returned</div>';setSt(`OK · ${ms}ms`,'ok');return}
+      const{columns,values}=rs[0];
+      let html=`<table class="res-tbl"><thead><tr>${columns.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>`;
+      values.forEach(row=>{html+=`<tr>${row.map(v=>`<td>${v===null?'<span style="color:var(--dim)">NULL</span>':v}</td>`).join('')}</tr>`});
+      html+='</tbody></table>';
+      document.getElementById('res-content').innerHTML=html;
+      setSt(`${values.length} row${values.length!==1?'s':''} · ${ms}ms`,'ok');
+    }catch(e){document.getElementById('res-content').innerHTML=`<div class="res-msg bad">❌ ${e.message}</div>`;setSt('Error','bad')}
+  };
+
+  document.getElementById('sql-run').addEventListener('click',runQ);
+  document.getElementById('sql-clear').addEventListener('click',()=>{
+    document.getElementById('sql-ed').value='';
+    document.getElementById('hint-card').classList.add('hid');
+    document.getElementById('res-content').innerHTML='<div class="res-msg">Run a query to see results here</div>';
+    setSt('Ready','info');
+  });
+  document.getElementById('sql-ed').addEventListener('keydown',e=>{
+    if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();runQ()}
+    if(e.key==='Tab'){e.preventDefault();const s=e.target,st=s.selectionStart;s.value=s.value.substring(0,st)+'  '+s.value.substring(s.selectionEnd);s.selectionStart=s.selectionEnd=st+2}
+  });
+  document.getElementById('sql-hint').addEventListener('click',()=>{
+    const hc=document.getElementById('hint-card');
+    if(!activeCh){hc.classList.remove('hid');hc.innerHTML='<h5>Hint</h5>Select a challenge first.';return}
+    hc.classList.remove('hid');
+    hc.innerHTML=`<h5>💡 Hint — ${activeCh.title}</h5>${activeCh.hint}<br><br><button class="btn btn-o btn-s" id="show-sol">Show Solution</button>`;
+    document.getElementById('show-sol').addEventListener('click',()=>{
+      document.getElementById('sql-ed').value=activeCh.sol;
+      hc.innerHTML+=`<br><br><span style="color:var(--ok)">✓ Solution loaded — press Run!</span>`;
+    });
+  });
+
+  try{
+    await initDB();renderSchema();renderChs();setSt('60 games · 10 players · Ready','info');
+  }catch(e){
+    document.getElementById('schema-box').innerHTML=`<h4>📋 Schema</h4><p style="color:var(--er);font-size:11px">⚠ ${e.message}</p>`;
+    console.error(e);
+  }
+})();
+
+/* ══════════════════════════════════════
+   DB MONITOR — Live dashboard for sqlDB
+══════════════════════════════════════ */
+let monInterval=null;
+
+function renderMonitor(){
+  if(!sqlDB){
+    document.getElementById('mon-body').innerHTML='<div class="res-msg" style="grid-column:span 3;padding:40px">⏳ SQL Lab database not ready yet — open SQL Lab first to initialize it, then come back.</div>';
+    return;
+  }
+  refreshMonitor();
+  if(!monInterval)monInterval=setInterval(refreshMonitor,5000);
+}
+
+function refreshMonitor(){
+  if(!sqlDB)return;
+  const body=document.getElementById('mon-body');
+  const now=new Date().toLocaleTimeString();
+  document.getElementById('mon-last').textContent='Last updated: '+now;
+
+  // Gather metrics by querying the live database
+  const q=(sql)=>{try{const r=sqlDB.exec(sql);return r.length?r[0].values:[];}catch{return[]}};
+
+  const totalGames=q('SELECT COUNT(*) FROM games')[0]?.[0]??0;
+  const totalPlayers=q('SELECT COUNT(*) FROM players')[0]?.[0]??0;
+  const totalRatings=q('SELECT COUNT(*) FROM player_ratings')[0]?.[0]??0;
+  const totalOpenings=q('SELECT COUNT(*) FROM openings')[0]?.[0]??0;
+
+  const whiteWins=q("SELECT COUNT(*) FROM games WHERE result='1-0'")[0]?.[0]??0;
+  const blackWins=q("SELECT COUNT(*) FROM games WHERE result='0-1'")[0]?.[0]??0;
+  const draws=q("SELECT COUNT(*) FROM games WHERE result='1/2-1/2'")[0]?.[0]??0;
+
+  const avgMoves=q('SELECT ROUND(AVG(moves),1) FROM games')[0]?.[0]??0;
+  const maxMoves=q('SELECT MAX(moves) FROM games')[0]?.[0]??0;
+  const minMoves=q('SELECT MIN(moves) FROM games')[0]?.[0]??0;
+
+  const topOpening=q('SELECT o.name,COUNT(*) AS n FROM games g JOIN openings o ON g.opening_id=o.id GROUP BY o.id ORDER BY n DESC LIMIT 1')[0]??['—',0];
+  const topPlayer=q("SELECT p.name,COUNT(*) AS w FROM games g JOIN players p ON (g.white_player_id=p.id AND g.result='1-0') OR (g.black_player_id=p.id AND g.result='0-1') GROUP BY p.id ORDER BY w DESC LIMIT 1")[0]??['—',0];
+
+  const openingStats=q('SELECT o.name,COUNT(*) AS n, ROUND(100.0*SUM(CASE WHEN g.result="1-0" THEN 1 ELSE 0 END)/COUNT(*),0) AS wp FROM games g JOIN openings o ON g.opening_id=o.id GROUP BY o.id ORDER BY n DESC');
+  const yearStats=q("SELECT strftime('%Y',played_date) AS yr,COUNT(*) AS n FROM games GROUP BY yr ORDER BY yr");
+  const playerStats=q("SELECT p.name,COUNT(*) AS w FROM games g JOIN players p ON (g.white_player_id=p.id AND g.result='1-0') OR (g.black_player_id=p.id AND g.result='0-1') GROUP BY p.id ORDER BY w DESC LIMIT 5");
+
+  const whiteWinPct=Math.round(whiteWins/totalGames*100);
+  const blackWinPct=Math.round(blackWins/totalGames*100);
+  const drawPct=Math.round(draws/totalGames*100);
+
+  // Simulate some "live" query metrics
+  const fakeQueries=[
+    {sql:'SELECT * FROM games WHERE opening_id=?',ms:Math.floor(Math.random()*3)+1,calls:Math.floor(Math.random()*120)+40},
+    {sql:'SELECT COUNT(*) FROM games GROUP BY opening_id',ms:Math.floor(Math.random()*8)+4,calls:Math.floor(Math.random()*60)+20},
+    {sql:'SELECT o.name, COUNT(*) FROM games g JOIN openings o…',ms:Math.floor(Math.random()*15)+8,calls:Math.floor(Math.random()*30)+10},
+    {sql:'SELECT p.name, MAX(elo) FROM player_ratings GROUP BY…',ms:Math.floor(Math.random()*12)+5,calls:Math.floor(Math.random()*20)+5},
+    {sql:'WITH wins AS (SELECT …) SELECT name WHERE win_count>…',ms:Math.floor(Math.random()*25)+12,calls:Math.floor(Math.random()*10)+2},
+  ];
+
+  body.innerHTML=`
+    <!-- Row 1: Key counters -->
+    <div class="mon-card">
+      <h4><span class="dot"></span>Total Games</h4>
+      <div class="mon-big">${totalGames}</div>
+      <div class="mon-sub">${totalOpenings} openings · ${totalPlayers} players</div>
+      <div class="mon-bar"><div class="mon-bar-f" style="width:100%"></div></div>
+    </div>
+    <div class="mon-card">
+      <h4><span class="dot"></span>Avg Game Length</h4>
+      <div class="mon-big">${avgMoves}</div>
+      <div class="mon-sub">moves per game (min ${minMoves} · max ${maxMoves})</div>
+      <div class="mon-bar"><div class="mon-bar-f" style="width:${Math.round(avgMoves/maxMoves*100)}%"></div></div>
+    </div>
+    <div class="mon-card">
+      <h4><span class="dot"></span>Rating Records</h4>
+      <div class="mon-big">${totalRatings}</div>
+      <div class="mon-sub">${Math.round(totalRatings/totalPlayers)} entries per player avg</div>
+      <div class="mon-bar"><div class="mon-bar-f" style="width:80%"></div></div>
+    </div>
+
+    <!-- Row 2: Results breakdown + top stats -->
+    <div class="mon-card">
+      <h4><span class="dot"></span>Results Breakdown</h4>
+      <ul class="mon-list">
+        <li>⬜ White Wins <span class="val">${whiteWins} (${whiteWinPct}%)</span></li>
+        <li>⬛ Black Wins <span class="val">${blackWins} (${blackWinPct}%)</span></li>
+        <li>½  Draws     <span class="val">${draws} (${drawPct}%)</span></li>
+      </ul>
+      <div style="display:flex;height:8px;border-radius:4px;overflow:hidden;margin-top:10px">
+        <div style="width:${whiteWinPct}%;background:var(--sq-l)"></div>
+        <div style="width:${drawPct}%;background:var(--dim2)"></div>
+        <div style="width:${blackWinPct}%;background:var(--s3)"></div>
+      </div>
+    </div>
+    <div class="mon-card">
+      <h4><span class="dot"></span>Top This DB</h4>
+      <ul class="mon-list">
+        <li>🏆 Most played opening <span class="val">${topOpening[0].toString().split(' ').slice(0,2).join(' ')}</span></li>
+        <li>👑 Most wins (player) <span class="val">${topPlayer[0]}</span></li>
+        <li>📅 Date range <span class="val">2019–2024</span></li>
+        <li>🗂 Tables <span class="val">4</span></li>
+        <li>🔍 Indexes <span class="val">3</span></li>
+      </ul>
+    </div>
+    <div class="mon-card">
+      <h4><span class="dot ${avgMoves>35?'':'warn'}"></span>Performance Sim</h4>
+      <ul class="mon-list">
+        <li>Cache hit ratio <span class="val ok" style="color:var(--ok)">99.2%</span></li>
+        <li>Active connections <span class="val">1</span></li>
+        <li>Idle connections <span class="val">0</span></li>
+        <li>Deadlocks <span class="val ok" style="color:var(--ok)">0</span></li>
+        <li>Table bloat <span class="val ok" style="color:var(--ok)">0%</span></li>
+      </ul>
+    </div>
+
+    <!-- Row 3: Query log -->
+    <div class="mon-card mon-span2">
+      <h4><span class="dot warn"></span>Simulated Query Log (last 5)</h4>
+      <ul class="mon-query-list">
+        ${fakeQueries.map(q=>`<li>
+          <span class="q-badge">×${q.calls}</span>
+          <span class="q-ms ${q.ms<5?'fast':''}">${q.ms}ms</span>
+          <span class="q-text">${q.sql}</span>
+        </li>`).join('')}
+      </ul>
+    </div>
+    <div class="mon-card">
+      <h4><span class="dot"></span>Games by Year</h4>
+      <ul class="mon-list">
+        ${yearStats.map(([yr,n])=>`<li>${yr} <span class="val">${n} games</span></li>`).join('')}
+      </ul>
+    </div>
+
+    <!-- Row 4: Table health -->
+    <div class="mon-card mon-span3">
+      <h4><span class="dot"></span>Table Health — Opening Win Rates</h4>
+      <table class="tbl-health">
+        <tr><th>Opening</th><th>Games</th><th>White Win %</th><th>Status</th><th>Bar</th></tr>
+        ${openingStats.map(([name,n,wp])=>`<tr>
+          <td>${name}</td><td>${n}</td><td>${wp}%</td>
+          <td style="color:${wp>55?'var(--ok)':wp<40?'var(--er)':'var(--warn)'}">${wp>55?'✓ White favored':wp<40?'✓ Black favored':'≈ Balanced'}</td>
+          <td style="min-width:100px"><div style="height:5px;background:var(--s3);border-radius:3px;overflow:hidden"><div style="width:${wp}%;height:100%;background:${wp>55?'var(--g1)':wp<40?'var(--er)':'var(--warn)'};border-radius:3px"></div></div></td>
+        </tr>`).join('')}
+      </table>
+    </div>
+  `;
+}
+
+document.getElementById('mon-ref').addEventListener('click',()=>{
+  if(sqlDB)refreshMonitor();
+  else{document.querySelector('[data-v="sqllab"]').click();setTimeout(()=>{document.querySelector('[data-v="monitor"]').click()},3000)}
+});
+</script>
+</body>
+</html>
