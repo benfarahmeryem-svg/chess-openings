@@ -24,8 +24,6 @@ This app was built as a personal portfolio project during my DBA studies. I want
 
 The SQL Lab runs a real **SQLite database inside the browser** using WebAssembly, with 8 progressive challenges covering everything from basic `SELECT` statements to window functions and CTEs. The DB Monitor tab shows live metrics on that database — the same kind of dashboard a DBA would build on top of a production PostgreSQL instance.
 
-Everything is in a **single HTML file** with no build tooling, so it deploys instantly to GitHub Pages and can be opened locally with a double-click.
-
 ---
 
 ## ✨ Features
